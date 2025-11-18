@@ -49,10 +49,18 @@
 
 ## Adding a new app (Windows)
 
-1. Find the Winget PackageIdentifier in the [winget-pkgs repo](https://github.com/microsoft/winget-pkgs).
+1. Find the Winget PackageIdentifier in the relevant [winget-pkgs repo manifest](https://github.com/microsoft/winget-pkgs/tree/master/manifests).
 
 2. Get the unique identifier that Fleet will use for matching the software with software inventory:
-  - On a test Windows host, install the app manually, then run the following PowerShell script: `Get-ItemProperty 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' | Where-Object {$_.DisplayName -like '*<App Name>*'} | Select-Object DisplayName, DisplayVersion, Publisher`
+  - On a test Windows host, install the app manually, then run the following PowerShell script: `Get-ItemProperty 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' | Where-Object {$_.DisplayName -like '*<App Name>*'}`
+   <!-- Jacob: the recent introduction of `upgrade_code` ingestion chose to prioritize it over display name as unique identifier, when present for an app. The above command does not return an UpgradeCode explicitly, but DOES contain a consistent upgrade-code-looking string, {<GUID>} in various fields e.g. ModifyPath, UninstallString, etc., but it's different than the upgrade_code ingested via osquery. We need to reconcile what to use as Windows software upgrade codes, then make sure the software unique identifier computations match our assumptions here. Some options:
+      1 - confirm UpgradeCode is a reliable enough way to identify Windows msi-based software, when it's present, for Fleet to use as a unique identifier. Modify these instructions to somehow grab the upgrade code and use here for FMA for Windows software
+      2 - If we can't confirm above, we'll need to remove upgrade_code from being prioritized as a unique identifier for `fleet.Software`, which it currently is. Add upgrade_code here if it's present, but don't use it as the software's unique_identifier.
+         - this seems like the most straightforward option, however it directly contradicts the original user story for ingesting and serving upgrade codes:
+            "As a Fleet API user,
+            I want to see Windows software UpgradeCodes in software inventory
+            so that I can verify the identity of specific Windows software."
+         -->
   - Use the exact value from `DisplayName` as the `unique_identifier`.
 
 If the `unique_identifier` doesn't match the `DisplayName`, then Fleet will incorrectly create two software titles when the Fleet-maintained app is added and later installed. One title for the Fleet-maintained app and a separate title for the inventoried software.
